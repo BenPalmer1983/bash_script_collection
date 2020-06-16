@@ -1,0 +1,28 @@
+#
+#  Might be outdated
+#
+
+
+Make SSH Keys
+
+cd /home/me/.ssh
+ssh-keygen -t rsa -C "name@email.com"
+
+
+key in:
+
+/home/me/.ssh/id_rsa.pub
+
+
+git config --global user.email "name@email.com"
+
+
+
+
+Adding new projects:
+
+git init
+git remote add origin git@github.com:<githubname>/<project>.git
+git add *
+git commit -m "first commit"
+git push -u origin master
