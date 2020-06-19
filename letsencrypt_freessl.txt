@@ -1,0 +1,139 @@
+     
+
+#############################################
+
+       Free Verified TSL Certificates
+                For Apache 2
+
+#############################################
+
+Provided by:
+https://letsencrypt.org/
+
+
+I wrote these notes for Mint/Debian
+
+
+
+1. Install Git
+
+sudo apt-get install git
+
+
+
+2. Clone certbot
+
+cd /opt
+sudo git clone https://github.com/certbot/certbot
+
+
+
+3. Change dir
+
+cd /opt/certbot
+
+
+
+4. Run certbot for the first time
+
+The website must be accessible through port 80 at this point - redirect to 443 only later
+Change the directories, domain names and email
+
+sudo ./certbot-auto certonly \
+--webroot -w /var/www/sites/mywebsite.co.uk/html \
+-d mywebsite.co.uk \
+-d www.mywebsite.co.uk \
+--non-interactive \
+--agree-tos \
+--email me@mywebsite.co.uk
+
+
+
+5. Make a config file for the TLS version of the website
+
+sudo nano /etc/apache2/sites-available/tls.mywebsite.co.uk.conf
+
+<IfModule mod_ssl.c>
+  <VirtualHost _default_:443>
+    ServerAdmin webmaster@mywebsite.co.uk
+    DocumentRoot /var/www/sites/mywebsite.co.uk/html
+    ServerName www.mywebsite.co.uk
+    ServerAlias www.mywebsite.co.uk mywebsite.co.uk
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/mywebsite.co.uk/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/mywebsite.co.uk/privkey.pem
+    <FilesMatch "\.(cgi|shtml|phtml|php)$">
+                    SSLOptions +StdEnvVars
+    </FilesMatch>
+    <Directory /var/www/sites/mywebsite.co.uk/html >
+      Options Indexes FollowSymLinks MultiViews
+      AllowOverride All
+      Order allow,deny
+      allow from all
+      # New directive needed in Apache 2.4.3:
+      Require all granted
+      # Set larger upload values
+      <IfModule mod_php7.c>
+        php_value upload_max_filesize 5M
+        php_value post_max_size 5M
+        php_value sendmail_path "/usr/sbin/sendmail -t -i -f me@mywebsite.co.uk"
+      </IfModule>
+    </Directory>
+    BrowserMatch "MSIE [2-6]" \
+                    nokeepalive ssl-unclean-shutdown \
+                    downgrade-1.0 force-response-1.0
+    BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
+  </VirtualHost>
+</IfModule>
+
+
+
+6. Make a link from the config file in the available directory to the enabled directory
+
+sudo ln -s /etc/apache2/sites-available/tls.mywebsite.co.uk.conf /etc/apache2/sites-enabled/tls.mywebsite.co.uk.conf
+
+
+
+
+7. Restart Apache
+
+sudo /etc/init.d/apache2 restart
+
+
+
+
+8. Manually renew every month (60 days at the latest)
+
+Make a renew script and make it executable:
+
+sudo mkdir /opt/scripts
+sudo nano /opt/scripts/certs.sh
+
+Content of /opt/scripts/certs.sh:
+
+#!/bin/bash
+cd /opt/certbot
+
+./certbot-auto certonly \
+--webroot -w /var/www/sites/mywebsite.co.uk/html \
+-d mywebsite.co.uk \
+-d www.mywebsite.co.uk \
+--non-interactive \
+--agree-tos \
+--email me@mywebsite.co.uk \
+--force-renew
+
+sudo chmod +x /opt/scripts/certs.sh
+
+
+
+
+9.  Edit crontab and add a line to run the script
+
+sudo nano /etc/crontab
+
+45 19 13 * * root cd /opt/scripts && ./certs.sh
+
+
